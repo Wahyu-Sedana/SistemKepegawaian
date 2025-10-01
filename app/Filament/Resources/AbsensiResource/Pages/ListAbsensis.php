@@ -56,11 +56,9 @@ class ListAbsensis extends ListRecords
     protected function checkIn(): void
     {
         try {
-
-            $latKantor = \App\Models\Setting::get('latitude', config('absensi.lokasi_kantor.latitude'));
-            $lonKantor = \App\Models\Setting::get('longitude', config('absensi.lokasi_kantor.longitude'));
-            $radiusMaksimal = \App\Models\Setting::get('radius', config('absensi.radius_maksimal'));
-
+            $latKantor = config('absensi.lokasi_kantor.latitude');
+            $lonKantor = config('absensi.lokasi_kantor.longitude');
+            $radiusMaksimal = config('absensi.radius_maksimal');
 
             $latitude = $this->latitude;
             $longitude = $this->longitude;

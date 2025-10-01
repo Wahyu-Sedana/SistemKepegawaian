@@ -3,7 +3,6 @@
 
     @push('scripts')
         <script>
-            // Loading indicator
             function showLoading(message = 'Mengambil lokasi GPS...') {
                 window.dispatchEvent(new CustomEvent('open-modal', {
                     detail: {
@@ -20,14 +19,12 @@
                 }));
             }
 
-            // Function untuk Check-in dengan GPS
             function getLocationAndCheckIn() {
                 if (!navigator.geolocation) {
                     alert('Browser Anda tidak mendukung GPS. Gunakan browser modern atau aktifkan lokasi.');
                     return;
                 }
 
-                // Tampilkan loading
                 showLoading('📍 Mengambil lokasi GPS Anda...');
 
                 navigator.geolocation.getCurrentPosition(
@@ -42,7 +39,6 @@
                             accuracy
                         });
 
-                        // Kirim ke Livewire
                         @this.call('processCheckIn', lat, lon)
                             .then(() => {
                                 hideLoading();
@@ -70,16 +66,15 @@
                         alert(errorMessage);
                         console.error('GPS Error:', error);
                     }, {
-                        enableHighAccuracy: true, // Gunakan GPS akurat
-                        timeout: 10000, // Timeout 10 detik
-                        maximumAge: 0 // Jangan gunakan cache
+                        enableHighAccuracy: true,
+                        timeout: 10000,
+                        maximumAge: 0
                     }
                 );
 
-                return false; // Prevent default action
+                return false;
             }
 
-            // Function untuk Check-out dengan GPS
             function getLocationAndCheckOut() {
                 if (!navigator.geolocation) {
                     alert('Browser Anda tidak mendukung GPS.');
@@ -117,7 +112,6 @@
                 return false;
             }
 
-            // Auto request permission saat page load (opsional)
             document.addEventListener('DOMContentLoaded', function() {
                 if (navigator.permissions && navigator.permissions.query) {
                     navigator.permissions.query({
@@ -135,7 +129,6 @@
             });
         </script>
 
-        <!-- Loading Modal (Opsional - untuk UX lebih baik) -->
         <div x-data="{ show: false }" x-show="show"
             x-on:open-modal.window="if ($event.detail.id === 'loading-modal') show = true"
             x-on:close-modal.window="if ($event.detail.id === 'loading-modal') show = false" style="display: none;"

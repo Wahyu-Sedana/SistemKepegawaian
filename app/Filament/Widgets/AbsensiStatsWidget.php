@@ -17,24 +17,23 @@ class AbsensiStatsWidget extends BaseWidget
         $bulanIni = now()->startOfMonth();
         $bulanDepan = now()->endOfMonth();
 
-        // =========================
-        // Rekap Bulanan
-        // =========================
-        $hadirBulanIni = Absensi::query()
-            ->when($user->hasRole('Staff'), fn($q) => $q->where('user_id', $user->id))
-            ->whereBetween('tanggal', [$bulanIni, $bulanDepan])
+        $query = Absensi::query()
+            ->whereBetween('tanggal', [$bulanIni, $bulanDepan]);
+
+        // Kalau staff → filter hanya absensi dirinya
+        if ($user->hasRole('Staff')) {
+            $query = $query->where('user_id', $user->id);
+        }
+
+        $hadirBulanIni = (clone $query)
             ->whereIn('status', ['hadir', 'terlambat'])
             ->count();
 
-        $terlambatBulanIni = Absensi::query()
-            ->when($user->hasRole('Staff'), fn($q) => $q->where('user_id', $user->id))
-            ->whereBetween('tanggal', [$bulanIni, $bulanDepan])
+        $terlambatBulanIni = (clone $query)
             ->where('status', 'terlambat')
             ->count();
 
-        $izinBulanIni = Absensi::query()
-            ->when($user->hasRole('Staff'), fn($q) => $q->where('user_id', $user->id))
-            ->whereBetween('tanggal', [$bulanIni, $bulanDepan])
+        $izinBulanIni = (clone $query)
             ->whereIn('status', ['izin', 'sakit'])
             ->count();
 
