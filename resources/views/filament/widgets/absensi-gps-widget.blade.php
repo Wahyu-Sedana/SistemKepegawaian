@@ -17,7 +17,7 @@
                         {{ now()->format('H:i') }}
                     </div>
                     <div class="text-xs text-gray-500 dark:text-gray-400">
-                        WITA
+                        WIB
                     </div>
                 </div>
             </div>

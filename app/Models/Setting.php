@@ -8,13 +8,36 @@ class Setting extends Model
 {
     protected $fillable = ['key', 'value'];
 
-    public static function get($key, $default = null)
+    public $timestamps = false;
+
+    public static function get(string $key, $default = null)
     {
-        return static::where('key', $key)->value('value') ?? $default;
+        $setting = self::where('key', $key)->first();
+        return $setting ? $setting->value : $default;
     }
 
-    public static function set($key, $value)
+    public static function set(string $key, $value): void
     {
-        return static::updateOrCreate(['key' => $key], ['value' => $value]);
+        self::updateOrCreate(
+            ['key' => $key],
+            ['value' => $value]
+        );
+    }
+
+    public static function getMultiple(array $keys): array
+    {
+        $settings = self::whereIn('key', $keys)->pluck('value', 'key')->toArray();
+
+        $result = [];
+        foreach ($keys as $key) {
+            $result[$key] = $settings[$key] ?? null;
+        }
+
+        return $result;
+    }
+
+    public static function allSettings(): array
+    {
+        return self::query()->pluck('value', 'key')->toArray();
     }
 }

@@ -24,4 +24,8 @@ class AbsensiGPSWidget extends Widget
             'absensi' => $absensiHariIni,
         ];
     }
+    public static function canView(): bool
+    {
+        return auth()->user()->hasRole(['Staff', 'HRD']);
+    }
 }
