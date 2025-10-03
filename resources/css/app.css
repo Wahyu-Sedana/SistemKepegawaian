@@ -1,0 +1,40 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@tailwind variants;
+
+/* Sidebar Dark Mode */
+aside.fi-sidebar {
+    @apply bg-gray-900;
+}
+
+/* Item sidebar normal */
+.fi-sidebar-item {
+    @apply hover:bg-gray-800 hover:text-white;
+}
+
+.fi-sidebar-item-label {
+    color: white;
+}
+
+.fi-sidebar-item-active {
+    & .fi-sidebar-item-button {
+        @apply bg-gray-800
+    }
+    & .fi-sidebar-item-label,
+    .fi-sidebar-item-icon {
+        @apply text-white;
+    }
+}
+
+a.fi-sidebar-item-button {
+   @apply hover:bg-gray-800
+}
+a.fi-sidebar-item-button {
+    @apply active:bg-gray-800
+}
+
+/* Hide scrollbar sidebar */
+.fi-sidebar-nav::-webkit-scrollbar {
+    display: none;
+}

@@ -3,8 +3,6 @@
 namespace App\Providers\Filament;
 
 use Filament\Http\Middleware\Authenticate;
-use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
-use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Pages;
@@ -16,6 +14,7 @@ use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
+use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
@@ -28,19 +27,34 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('admin')
             ->login()
-            ->brandName('Sistem Kepegawaian')
             ->colors([
-                'primary' => Color::Amber,
+                'primary' => Color::Blue,
+                'danger' => Color::Rose,
+                'gray' => Color::Gray,
+                'info' => Color::Sky,
+                'success' => Color::Emerald,
+                'warning' => Color::Orange,
             ])
+            ->font('Inter')
+            ->brandName('Sistem Absensi')
+            ->brandLogo(asset('logo.png'))
+            ->brandLogoHeight('2.5rem')
+            ->favicon(asset('images/favicon.png'))
+            ->viteTheme('resources/css/app.css')
+            ->sidebarFullyCollapsibleOnDesktop()
+            ->sidebarWidth('16rem')
+            ->collapsedSidebarWidth('4rem')
+            ->topNavigation(false)
+            ->breadcrumbs(true)
+            ->darkMode(false)
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
+            ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->pages([
                 Pages\Dashboard::class,
             ])
-            ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([
-                \App\Filament\Widgets\AbsensiGPSWidget::class,
-                \App\Filament\Widgets\AbsensiStatsWidget::class,
+                // \App\Filament\Widgets\DateTimeTopbarWidget::class,
             ])
             ->middleware([
                 EncryptCookies::class,
@@ -54,7 +68,7 @@ class AdminPanelProvider extends PanelProvider
                 DispatchServingFilamentEvent::class,
             ])
             ->plugins([
-                FilamentShieldPlugin::make(),
+                \BezhanSalleh\FilamentShield\FilamentShieldPlugin::make(),
             ])
             ->authMiddleware([
                 Authenticate::class,
