@@ -10,6 +10,7 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 
 class AbsensiResource extends Resource
 {
@@ -161,19 +162,52 @@ class AbsensiResource extends Resource
                         default => 'secondary',
                     }),
 
+                Tables\Columns\TextColumn::make('created_at')
+                    ->label('Waktu Input')
+                    ->dateTime('d M Y H:i')
+                    ->sortable()
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('updated_at')
+                    ->label('Terakhir Update')
+                    ->dateTime('d M Y H:i')
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
+
                 // Tables\Columns\ImageColumn::make('foto_masuk')
                 //     ->label('Foto Masuk')
                 //     ->circular()
                 //     ->defaultImageUrl(url('/images/no-image.png')),
-
-                Tables\Columns\TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->defaultSort('tanggal', 'desc')
             ->filters([
+                Tables\Filters\Filter::make('periode')
+                    ->label('Periode Tampilan')
+                    ->form([
+                        Forms\Components\Select::make('value')
+                            ->label('Pilih Periode')
+                            ->options([
+                                'harian' => 'Hari Ini',
+                                'semua' => 'Tampilkan Semua',
+                            ])
+                            ->default('harian')
+                            ->native(false),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        if (isset($data['value']) && $data['value'] === 'harian') {
+                            return $query->whereDate('tanggal', today());
+                        }
+                        return $query;
+                    })
+                    ->indicateUsing(function (array $data): ?string {
+                        if (!isset($data['value']) || $data['value'] === 'semua') {
+                            return 'Menampilkan: Semua Data';
+                        }
+                        return 'Menampilkan: Hari Ini (' . today()->format('d M Y') . ')';
+                    }),
+
                 Tables\Filters\SelectFilter::make('status')
+                    ->label('Status Kehadiran')
                     ->options([
                         'hadir' => 'Hadir',
                         'terlambat' => 'Terlambat',
@@ -181,7 +215,9 @@ class AbsensiResource extends Resource
                         'sakit' => 'Sakit',
                         'alpha' => 'Alpha',
                     ]),
+
                 Tables\Filters\Filter::make('tanggal')
+                    ->label('Rentang Tanggal')
                     ->form([
                         Forms\Components\DatePicker::make('dari_tanggal')
                             ->label('Dari Tanggal'),
@@ -219,7 +255,7 @@ class AbsensiResource extends Resource
     {
         return [
             'index' => Pages\ListAbsensis::route('/'),
-            'create' => Pages\CreateAbsensi::route('/create'),
+            // 'create' => Pages\CreateAbsensi::route('/create'),
             'edit' => Pages\EditAbsensi::route('/{record}/edit'),
             'view' => Pages\ViewAbsensi::route('/{record}'),
         ];

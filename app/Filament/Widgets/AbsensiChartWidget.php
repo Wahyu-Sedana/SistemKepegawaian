@@ -11,8 +11,12 @@ class AbsensiChartWidget extends ChartWidget
     protected static ?string $heading = 'Grafik Kehadiran 7 Hari Terakhir';
 
     protected static ?int $sort = 3;
+    protected int | string | array $columnSpan = [
+        'md' => 2,
+        'xl' => 3,
+    ];
 
-    protected int | string | array $columnSpan = 'full';
+    protected static ?string $maxHeight = '500px';
 
     protected function getData(): array
     {
@@ -56,6 +60,44 @@ class AbsensiChartWidget extends ChartWidget
     protected function getType(): string
     {
         return 'bar';
+    }
+
+    protected function getOptions(): array
+    {
+        return [
+            'maintainAspectRatio' => false,
+            'plugins' => [
+                'legend' => [
+                    'display' => true,
+                    'position' => 'bottom',
+                    'labels' => [
+                        'boxWidth' => 12,
+                        'padding' => 10,
+                        'font' => [
+                            'size' => 11,
+                        ],
+                    ],
+                ],
+            ],
+            'scales' => [
+                'y' => [
+                    'beginAtZero' => true,
+                    'ticks' => [
+                        'stepSize' => 1,
+                        'font' => [
+                            'size' => 10,
+                        ],
+                    ],
+                ],
+                'x' => [
+                    'ticks' => [
+                        'font' => [
+                            'size' => 10,
+                        ],
+                    ],
+                ],
+            ],
+        ];
     }
 
     protected function getAbsensiData(): array

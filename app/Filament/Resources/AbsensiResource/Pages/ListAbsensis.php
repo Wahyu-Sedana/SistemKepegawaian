@@ -8,6 +8,7 @@ use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Notifications\Notification;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class ListAbsensis extends ListRecords
 {
@@ -30,6 +31,7 @@ class ListAbsensis extends ListRecords
                 ->icon('heroicon-o-arrow-right-on-rectangle')
                 ->color('success')
                 ->extraAttributes(['onclick' => 'getLocationAndCheckIn()'])
+                ->visible(fn() => !auth()->user()->hasRole(['super_admin']))
                 ->action(function () {
                     return null;
                 });
@@ -41,14 +43,15 @@ class ListAbsensis extends ListRecords
                 ->icon('heroicon-o-arrow-left-on-rectangle')
                 ->color('danger')
                 ->extraAttributes(['onclick' => 'getLocationAndCheckOut()'])
+                ->visible(fn() => !auth()->user()->hasRole(['super_admin']))
                 ->action(function () {
                     return null;
                 });
         }
 
-        if ($user->hasRole(['super_admin', 'HRD'])) {
-            $actions[] = Actions\CreateAction::make();
-        }
+        // if ($user->hasRole(['super_admin', 'HRD'])) {
+        //     $actions[] = Actions\CreateAction::make();
+        // }
 
         return $actions;
     }
@@ -73,14 +76,48 @@ class ListAbsensis extends ListRecords
             }
 
             try {
-                $response = Http::get("https://nominatim.openstreetmap.org/reverse", [
-                    'lat' => $latitude,
-                    'lon' => $longitude,
-                    'format' => 'json'
-                ]);
-                $data = $response->json();
-                $alamat = $data['display_name'] ?? 'Alamat tidak diketahui';
+                $response = Http::withHeaders([
+                    'User-Agent' => config('app.name', 'Laravel') . '/1.0'
+                ])
+                    ->timeout(10)
+                    ->get("https://nominatim.openstreetmap.org/reverse", [
+                        'lat' => $latitude,
+                        'lon' => $longitude,
+                        'format' => 'json',
+                        'addressdetails' => 1,
+                        'accept-language' => 'id'
+                    ]);
+
+                Log::info('Nominatim Response Status: ' . $response->status());
+                Log::info('Nominatim Response Body: ' . $response->body());
+
+                if ($response->successful()) {
+                    $data = $response->json();
+
+                    if (isset($data['display_name']) && !empty($data['display_name'])) {
+                        $alamat = $data['display_name'];
+                    } elseif (isset($data['address'])) {
+
+                        $address = $data['address'];
+                        $parts = array_filter([
+                            $address['road'] ?? $address['pedestrian'] ?? '',
+                            $address['suburb'] ?? $address['neighbourhood'] ?? '',
+                            $address['city_district'] ?? '',
+                            $address['city'] ?? $address['town'] ?? '',
+                            $address['state'] ?? ''
+                        ]);
+                        $alamat = implode(', ', $parts);
+                    } else {
+                        $alamat = "Lat: {$latitude}, Lon: {$longitude}";
+                    }
+                } else {
+                    Log::warning('Nominatim API failed: ' . $response->status());
+                    $alamat = "Lat: {$latitude}, Lon: {$longitude}";
+                }
+
+                Log::info('Final alamat:', ['alamat' => $alamat]);
             } catch (\Exception $e) {
+                Log::error('Geocoding error: ' . $e->getMessage());
                 $alamat = "Lat: {$latitude}, Lon: {$longitude}";
             }
 
@@ -155,14 +192,47 @@ class ListAbsensis extends ListRecords
             }
 
             try {
-                $response = Http::get("https://nominatim.openstreetmap.org/reverse", [
-                    'lat' => $latitude,
-                    'lon' => $longitude,
-                    'format' => 'json'
-                ]);
-                $data = $response->json();
-                $alamat = $data['display_name'] ?? 'Alamat tidak diketahui';
+                $response = Http::withHeaders([
+                    'User-Agent' => config('app.name', 'Laravel') . '/1.0'
+                ])
+                    ->timeout(10)
+                    ->get("https://nominatim.openstreetmap.org/reverse", [
+                        'lat' => $latitude,
+                        'lon' => $longitude,
+                        'format' => 'json',
+                        'addressdetails' => 1,
+                        'accept-language' => 'id'
+                    ]);
+
+                Log::info('Nominatim Response Status: ' . $response->status());
+                Log::info('Nominatim Response Body: ' . $response->body());
+
+                if ($response->successful()) {
+                    $data = $response->json();
+
+                    if (isset($data['display_name']) && !empty($data['display_name'])) {
+                        $alamat = $data['display_name'];
+                    } elseif (isset($data['address'])) {
+                        $address = $data['address'];
+                        $parts = array_filter([
+                            $address['road'] ?? $address['pedestrian'] ?? '',
+                            $address['suburb'] ?? $address['neighbourhood'] ?? '',
+                            $address['city_district'] ?? '',
+                            $address['city'] ?? $address['town'] ?? '',
+                            $address['state'] ?? ''
+                        ]);
+                        $alamat = implode(', ', $parts);
+                    } else {
+                        $alamat = "Lat: {$latitude}, Lon: {$longitude}";
+                    }
+                } else {
+                    Log::warning('Nominatim API failed: ' . $response->status());
+                    $alamat = "Lat: {$latitude}, Lon: {$longitude}";
+                }
+
+                Log::info('Final alamat:', ['alamat' => $alamat]);
             } catch (\Exception $e) {
+                Log::error('Geocoding error: ' . $e->getMessage());
                 $alamat = "Lat: {$latitude}, Lon: {$longitude}";
             }
 

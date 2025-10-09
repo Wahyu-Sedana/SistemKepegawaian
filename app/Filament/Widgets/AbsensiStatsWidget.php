@@ -43,7 +43,6 @@ class AbsensiStatsWidget extends BaseWidget
             ->where('status', 'terlambat')
             ->count();
 
-        // Chart data untuk kehadiran 7 hari terakhir
         $chartData = [];
         for ($i = 6; $i >= 0; $i--) {
             $date = now()->subDays($i)->startOfDay();
@@ -58,7 +57,7 @@ class AbsensiStatsWidget extends BaseWidget
                 ->description('Staff aktif')
                 ->descriptionIcon('heroicon-m-user-group')
                 ->color('primary')
-                ->chart([5, 6, 7, 8, 7, 9, 10]), // Dummy trend
+                ->chart([5, 6, 7, 8, 7, 9, 10]),
 
             Stat::make('Absen Hari Ini', $absenHariIni . ' / ' . $totalKaryawan)
                 ->description(round(($totalKaryawan > 0 ? $absenHariIni / $totalKaryawan : 0) * 100) . '% kehadiran')

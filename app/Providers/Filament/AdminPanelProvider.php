@@ -42,6 +42,7 @@ class AdminPanelProvider extends PanelProvider
             ->favicon(asset('images/favicon.png'))
             ->viteTheme('resources/css/app.css')
             ->sidebarFullyCollapsibleOnDesktop()
+            ->globalSearchKeyBindings(["command+k", "ctrl+k"])
             ->sidebarWidth('16rem')
             ->collapsedSidebarWidth('4rem')
             ->topNavigation(false)
