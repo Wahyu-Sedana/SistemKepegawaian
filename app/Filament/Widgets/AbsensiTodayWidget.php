@@ -23,7 +23,7 @@ class AbsensiTodayWidget extends BaseWidget
                     ->with('user')
                     ->latest('jam_masuk')
             )
-            ->heading('📋 Absensi Hari Ini - ' . now()->translatedFormat('l, d F Y'))
+            ->heading('Absensi Hari Ini - ' . now()->translatedFormat('l, d F Y'))
             ->columns([
                 Tables\Columns\TextColumn::make('user.name')
                     ->label('Nama Karyawan')

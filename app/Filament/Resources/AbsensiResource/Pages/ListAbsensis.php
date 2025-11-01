@@ -4,6 +4,7 @@ namespace App\Filament\Resources\AbsensiResource\Pages;
 
 use App\Filament\Resources\AbsensiResource;
 use App\Models\Absensi;
+use App\Models\Setting;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Notifications\Notification;
@@ -59,9 +60,12 @@ class ListAbsensis extends ListRecords
     protected function checkIn(): void
     {
         try {
-            $latKantor = config('absensi.lokasi_kantor.latitude');
-            $lonKantor = config('absensi.lokasi_kantor.longitude');
-            $radiusMaksimal = config('absensi.radius_maksimal');
+            $settingLat = Setting::where('key', 'latitude')->value('value');
+            $settingLon = Setting::where('key', 'longitude')->value('value');
+            $settingRadius = Setting::where('key', 'radius')->value('value');
+            $latKantor = $settingLat ?? config('absensi.lokasi_kantor.latitude');
+            $lonKantor = $settingLon ?? config('absensi.lokasi_kantor.longitude');
+            $radiusMaksimal = $settingRadius ?? config('absensi.radius_maksimal');
 
             $latitude = $this->latitude;
             $longitude = $this->longitude;

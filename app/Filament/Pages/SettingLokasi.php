@@ -15,6 +15,7 @@ class SettingLokasi extends Page implements HasForms
 
     protected static ?string $navigationIcon = 'heroicon-o-map-pin';
     protected static ?string $navigationGroup = 'Pengaturan';
+    protected static ?string $navigationLabel = 'Lokasi Kantor';
     protected static ?string $title = 'Pengaturan Lokasi Kantor';
     protected static string $view = 'filament.pages.setting-lokasi';
     protected static ?int $navigationSort = 99;
@@ -25,6 +26,7 @@ class SettingLokasi extends Page implements HasForms
     public $jam_masuk;
     public $jam_keluar;
     public $nama_kantor;
+    public $search_location;
     public ?string $map;
 
     public function mount(): void
@@ -54,26 +56,53 @@ class SettingLokasi extends Page implements HasForms
                 ->columns(1),
 
             Forms\Components\Section::make('Koordinat Lokasi Kantor')
-                ->description('Klik "Ambil Lokasi GPS" atau isi koordinat manual')
+                ->description('Cari lokasi, ambil GPS, atau isi koordinat manual')
                 ->schema([
-                    Forms\Components\Grid::make(2)
-                        ->schema([
-                            Forms\Components\TextInput::make('latitude')
-                                ->label('Latitude')
-                                ->numeric()
-                                ->required()
-                                ->step('any')
-                                ->extraAttributes(['id' => 'latitude-input'])
-                                ->placeholder('-8.670458'),
+                    // Forms\Components\TextInput::make('search_location')
+                    //     ->label('🔍 Cari Lokasi')
+                    //     ->placeholder('Cari alamat, tempat, atau landmark...')
+                    //     ->extraAttributes(['id' => 'search-location-input'])
+                    //     ->helperText('Ketik nama tempat atau alamat untuk mencari lokasi')
+                    //     ->dehydrated(false)
+                    //     ->columnSpanFull(),
 
-                            Forms\Components\TextInput::make('longitude')
-                                ->label('Longitude')
-                                ->numeric()
-                                ->required()
-                                ->step('any')
-                                ->extraAttributes(['id' => 'longitude-input'])
-                                ->placeholder('115.212631'),
-                        ]),
+                    // Forms\Components\Grid::make(2)
+                    //     ->schema([
+                    //         Forms\Components\TextInput::make('latitude')
+                    //             ->label('Latitude')
+                    //             ->numeric()
+                    //             ->required()
+                    //             ->step('any')
+                    //             ->extraAttributes(['id' => 'latitude-input'])
+                    //             ->placeholder('-8.670458'),
+
+                    //         Forms\Components\TextInput::make('longitude')
+                    //             ->label('Longitude')
+                    //             ->numeric()
+                    //             ->required()
+                    //             ->step('any')
+                    //             ->extraAttributes(['id' => 'longitude-input'])
+                    //             ->placeholder('115.212631'),
+                    //     ]),
+
+                    Forms\Components\Hidden::make('latitude')
+                        ->extraAttributes([
+                            'id' => 'latitude-input',
+                            'name' => 'latitude',
+                            'wire:model' => 'latitude'
+                        ])
+                        ->dehydrated(true),
+
+                    Forms\Components\Hidden::make('longitude')
+                        ->extraAttributes([
+                            'id' => 'longitude-input',
+                            'name' => 'longitude',
+                            'wire:model' => 'longitude'
+                        ])
+                        ->dehydrated(true),
+
+
+
 
                     Forms\Components\ViewField::make('map')
                         ->view('components.setting-map')
@@ -118,6 +147,9 @@ class SettingLokasi extends Page implements HasForms
     {
         $data = $this->form->getState();
 
+        $data['latitude'] = request()->input('latitude', $data['latitude'] ?? null);
+        $data['longitude'] = request()->input('longitude', $data['longitude'] ?? null);
+
         Setting::set('latitude', $data['latitude']);
         Setting::set('longitude', $data['longitude']);
         Setting::set('radius', $data['radius']);
@@ -145,6 +177,20 @@ class SettingLokasi extends Page implements HasForms
         Notification::make()
             ->title('Lokasi GPS berhasil diambil!')
             ->body("Koordinat: {$lat}, {$lon}")
+            ->success()
+            ->send();
+    }
+
+    public function updateFromSearch($lat, $lon, $address): void
+    {
+        $this->form->fill([
+            'latitude' => round($lat, 7),
+            'longitude' => round($lon, 7),
+        ]);
+
+        Notification::make()
+            ->title('Lokasi berhasil dipilih!')
+            ->body($address)
             ->success()
             ->send();
     }

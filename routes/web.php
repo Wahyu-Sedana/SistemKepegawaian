@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\SlipGajiPdfController;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -16,4 +17,11 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return redirect()->route('filament.admin.auth.login');
+});
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('/slip-gaji/{id}/pdf', [SlipGajiPdfController::class, 'download'])
+        ->name('slip-gaji.pdf');
+    Route::post('/slip-gaji/bulk-pdf', [SlipGajiPdfController::class, 'downloadBulk'])
+        ->name('slip-gaji.bulk-pdf');
 });
