@@ -30,7 +30,7 @@ class UserResource extends Resource
     {
         return $form
             ->schema([
-                TextInput::make('nip')->unique(ignoreRecord: true),
+                TextInput::make('nik')->unique(ignoreRecord: true),
                 TextInput::make('name')->required(),
                 Textarea::make('address'),
                 TextInput::make('phone'),
@@ -54,7 +54,7 @@ class UserResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('nip')->sortable()->searchable()->placeholder("-"),
+                TextColumn::make('nik')->sortable()->searchable()->placeholder("-"),
                 TextColumn::make('name')->sortable()->searchable(),
                 TextColumn::make('email')->sortable(),
                 TextColumn::make('phone')->sortable()->placeholder("-"),
