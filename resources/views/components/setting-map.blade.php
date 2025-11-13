@@ -11,7 +11,7 @@
 <div
     class="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between bg-gray-50 dark:bg-gray-800/50 rounded-lg p-3 gap-3">
     <div class="text-sm text-gray-600 dark:text-gray-400">
-        <p class="font-medium">Koordinat Saat Ini:</p>
+        <p class="font-medium">Koordinat Marker:</p>
         <p class="text-xs mt-1" id="current-coords">{{ $lat }}, {{ $lon }}</p>
     </div>
 
@@ -61,22 +61,69 @@
             updateCoords(lngLat.lat, lngLat.lng);
         });
 
-        // Fungsi update tampilan koordinat dan input hidden
+        // Fungsi update tampilan koordinat dan input form
         function updateCoords(lat, lon) {
-            document.getElementById('current-coords').textContent = `${lat.toFixed(7)}, ${lon.toFixed(7)}`;
+            const latFixed = parseFloat(lat).toFixed(7);
+            const lonFixed = parseFloat(lon).toFixed(7);
 
+            // Update display koordinat
+            document.getElementById('current-coords').textContent = `${latFixed}, ${lonFixed}`;
 
-            // Update Livewire state langsung
+            // Update input fields
+            const latInput = document.getElementById('latitude-input');
+            const lonInput = document.getElementById('longitude-input');
+
+            if (latInput && lonInput) {
+                latInput.value = latFixed;
+                lonInput.value = lonFixed;
+
+                // Trigger Livewire update
+                latInput.dispatchEvent(new Event('input', {
+                    bubbles: true
+                }));
+                lonInput.dispatchEvent(new Event('input', {
+                    bubbles: true
+                }));
+            }
+
+            // Update Livewire state
             if (window.Livewire) {
                 const livewireEl = document.querySelector('[wire\\:id]');
                 if (livewireEl) {
                     const lw = Livewire.find(livewireEl.getAttribute('wire:id'));
-                    lw.set('latitude', lat.toFixed(7));
-                    lw.set('longitude', lon.toFixed(7));
+                    if (lw) {
+                        lw.set('latitude', latFixed);
+                        lw.set('longitude', lonFixed);
+                    }
                 }
             }
         }
 
+        // Listen untuk update dari input manual
+        window.addEventListener('update-marker-from-input', (event) => {
+            const {
+                lat,
+                lon
+            } = event.detail;
+
+            if (lat && lon && !isNaN(lat) && !isNaN(lon)) {
+                const newLat = parseFloat(lat);
+                const newLon = parseFloat(lon);
+
+                // Update marker position
+                marker.setLngLat([newLon, newLat]);
+
+                // Fly to new position
+                map.flyTo({
+                    center: [newLon, newLat],
+                    zoom: 16
+                });
+
+                // Update display
+                document.getElementById('current-coords').textContent =
+                    `${newLat.toFixed(7)}, ${newLon.toFixed(7)}`;
+            }
+        });
 
         // Tambahkan Geocoder (search bar)
         const geocoder = new MapboxGeocoder({

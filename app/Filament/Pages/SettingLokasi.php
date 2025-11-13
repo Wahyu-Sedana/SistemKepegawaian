@@ -56,58 +56,47 @@ class SettingLokasi extends Page implements HasForms
                 ->columns(1),
 
             Forms\Components\Section::make('Koordinat Lokasi Kantor')
-                ->description('Cari lokasi, ambil GPS, atau isi koordinat manual')
+                ->description('Cari lokasi di map, ambil GPS, atau isi koordinat manual')
                 ->schema([
-                    // Forms\Components\TextInput::make('search_location')
-                    //     ->label('🔍 Cari Lokasi')
-                    //     ->placeholder('Cari alamat, tempat, atau landmark...')
-                    //     ->extraAttributes(['id' => 'search-location-input'])
-                    //     ->helperText('Ketik nama tempat atau alamat untuk mencari lokasi')
-                    //     ->dehydrated(false)
-                    //     ->columnSpanFull(),
-
-                    // Forms\Components\Grid::make(2)
-                    //     ->schema([
-                    //         Forms\Components\TextInput::make('latitude')
-                    //             ->label('Latitude')
-                    //             ->numeric()
-                    //             ->required()
-                    //             ->step('any')
-                    //             ->extraAttributes(['id' => 'latitude-input'])
-                    //             ->placeholder('-8.670458'),
-
-                    //         Forms\Components\TextInput::make('longitude')
-                    //             ->label('Longitude')
-                    //             ->numeric()
-                    //             ->required()
-                    //             ->step('any')
-                    //             ->extraAttributes(['id' => 'longitude-input'])
-                    //             ->placeholder('115.212631'),
-                    //     ]),
-
-                    Forms\Components\Hidden::make('latitude')
-                        ->extraAttributes([
-                            'id' => 'latitude-input',
-                            'name' => 'latitude',
-                            'wire:model' => 'latitude'
-                        ])
-                        ->dehydrated(true),
-
-                    Forms\Components\Hidden::make('longitude')
-                        ->extraAttributes([
-                            'id' => 'longitude-input',
-                            'name' => 'longitude',
-                            'wire:model' => 'longitude'
-                        ])
-                        ->dehydrated(true),
-
-
-
-
                     Forms\Components\ViewField::make('map')
                         ->view('components.setting-map')
                         ->columnSpanFull()
                         ->dehydrated(false),
+
+                    Forms\Components\Grid::make(2)
+                        ->schema([
+                            Forms\Components\TextInput::make('latitude')
+                                ->label('Latitude')
+                                ->numeric()
+                                ->required()
+                                ->step('any')
+                                ->reactive()
+                                ->afterStateUpdated(function ($state) {
+                                    $this->dispatch('update-marker-from-input', [
+                                        'lat' => $state,
+                                        'lon' => $this->longitude
+                                    ]);
+                                })
+                                ->extraAttributes(['id' => 'latitude-input'])
+                                ->placeholder('-8.670458')
+                                ->helperText('Isi manual atau gunakan map di atas'),
+
+                            Forms\Components\TextInput::make('longitude')
+                                ->label('Longitude')
+                                ->numeric()
+                                ->required()
+                                ->step('any')
+                                ->reactive()
+                                ->afterStateUpdated(function ($state) {
+                                    $this->dispatch('update-marker-from-input', [
+                                        'lat' => $this->latitude,
+                                        'lon' => $state
+                                    ]);
+                                })
+                                ->extraAttributes(['id' => 'longitude-input'])
+                                ->placeholder('115.212631')
+                                ->helperText('Isi manual atau gunakan map di atas'),
+                        ]),
                 ]),
 
             Forms\Components\Section::make('Pengaturan Absensi')
@@ -146,9 +135,6 @@ class SettingLokasi extends Page implements HasForms
     public function save()
     {
         $data = $this->form->getState();
-
-        $data['latitude'] = request()->input('latitude', $data['latitude'] ?? null);
-        $data['longitude'] = request()->input('longitude', $data['longitude'] ?? null);
 
         Setting::set('latitude', $data['latitude']);
         Setting::set('longitude', $data['longitude']);
