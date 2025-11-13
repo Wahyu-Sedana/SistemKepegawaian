@@ -19,10 +19,8 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Filament\Notifications\Notification;
-
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\Section;
-use Filament\Infolists\Components\KeyValueEntry;
 use Filament\Infolists\Infolist;
 
 class PenggajianResource extends Resource
@@ -37,20 +35,15 @@ class PenggajianResource extends Resource
 
     public static function calculateNetSalary(Set $set, Get $get): void
     {
-        $pokok    = (float) ($get('gaji_pokok') ?? 0);
+        $pokok = (float) ($get('gaji_pokok') ?? 0);
         $tunjangan = (float) ($get('tunjangan') ?? 0);
-        $potongan  = (float) ($get('potongan') ?? 0);
+        $totalLembur = (float) ($get('total_lembur') ?? 0);
+        $potongan = (float) ($get('potongan') ?? 0);
 
-        $bersih = $pokok + $tunjangan - $potongan;
+        $bersih = $pokok + $tunjangan + $totalLembur - $potongan;
 
         $set('gaji_bersih', $bersih);
     }
-
-    protected function getRedirectUrl(): string
-    {
-        return $this->getResource()::getUrl('index');
-    }
-
 
     public static function form(Form $form): Form
     {
@@ -73,7 +66,6 @@ class PenggajianResource extends Resource
                             ->live()
                             ->afterStateUpdated(function (Set $set, $state) {
                                 if ($state) {
-                                    // Periode adalah bulan SEBELUM tanggal pembayaran
                                     $periodeDate = \Carbon\Carbon::parse($state)->subMonth();
                                     $set('periode', $periodeDate->format('Y-m'));
                                 }
@@ -86,15 +78,45 @@ class PenggajianResource extends Resource
                     ]),
 
                 Forms\Components\Section::make('Komponen Gaji')
+                    ->description('Klik tombol "Hitung Otomatis" setelah mengisi Gaji Harian untuk menghitung gaji berdasarkan kehadiran')
                     ->columns(3)
                     ->schema([
-                        TextInput::make('gaji_pokok')
-                            ->label('Gaji Pokok')
+                        TextInput::make('gaji_harian')
+                            ->label('Gaji Harian')
                             ->numeric()
                             ->required()
                             ->live(debounce: 500)
-                            ->afterStateUpdated(fn(Set $set, Get $get) => self::calculateNetSalary($set, $get))
-                            ->suffix('IDR'),
+                            ->helperText('Sistem bayar per hari hadir')
+                            ->suffix('IDR')
+                            ->columnSpan(1),
+
+                        Forms\Components\Placeholder::make('info_gaji_pokok')
+                            ->label('Total Gaji dari Kehadiran')
+                            ->content(function (Get $get) {
+                                $gajiPokok = $get('gaji_pokok') ?? 0;
+                                $details = $get('detail_potongan');
+                                $jumlahHadir = $details['summary']['jumlah_hadir'] ?? 0;
+
+                                if ($gajiPokok > 0) {
+                                    return new \Illuminate\Support\HtmlString(
+                                        '<div class="text-lg font-semibold text-success-600 dark:text-success-400">' .
+                                            'Rp ' . number_format($gajiPokok, 0, ',', '.') .
+                                            '</div>' .
+                                            '<div class="text-xs text-gray-500 mt-1">' .
+                                            'Hadir ' . $jumlahHadir . ' hari × Rp ' . number_format($get('gaji_harian') ?? 0, 0, ',', '.') .
+                                            '</div>'
+                                    );
+                                }
+                                return new \Illuminate\Support\HtmlString(
+                                    '<div class="text-sm text-gray-500 italic">Klik tombol hitung otomatis</div>'
+                                );
+                            })
+                            ->columnSpan(2),
+
+                        Forms\Components\Hidden::make('gaji_pokok')
+                            ->default(0)
+                            ->dehydrated()
+                            ->live(),
 
                         TextInput::make('tunjangan')
                             ->label('Total Tunjangan')
@@ -104,6 +126,24 @@ class PenggajianResource extends Resource
                             ->afterStateUpdated(fn(Set $set, Get $get) => self::calculateNetSalary($set, $get))
                             ->suffix('IDR'),
 
+                        TextInput::make('total_jam_lembur')
+                            ->label('Total Jam Lembur')
+                            ->numeric()
+                            ->default(0)
+                            ->readOnly()
+                            ->suffix('Jam')
+                            ->helperText('Dihitung otomatis dari data absensi'),
+
+                        TextInput::make('total_lembur')
+                            ->label('Total Bayaran Lembur')
+                            ->numeric()
+                            ->default(0)
+                            ->readOnly()
+                            ->live(debounce: 500)
+                            ->afterStateUpdated(fn(Set $set, Get $get) => self::calculateNetSalary($set, $get))
+                            ->suffix('IDR')
+                            ->helperText('Rp 15.000 per jam'),
+
                         TextInput::make('potongan')
                             ->label('Total Potongan')
                             ->numeric()
@@ -112,7 +152,7 @@ class PenggajianResource extends Resource
                             ->live(debounce: 500)
                             ->afterStateUpdated(fn(Set $set, Get $get) => self::calculateNetSalary($set, $get))
                             ->suffix('IDR')
-                            ->helperText('Potongan dihitung otomatis dari keterlambatan & ketidakhadiran'),
+                            ->helperText('Dihitung otomatis'),
 
                         TextInput::make('gaji_bersih')
                             ->label('Gaji Bersih (Netto)')
@@ -124,6 +164,17 @@ class PenggajianResource extends Resource
                             ->suffix('IDR')
                             ->columnSpanFull(),
 
+                        Forms\Components\Placeholder::make('warning_belum_hitung')
+                            ->label('')
+                            ->content(new \Illuminate\Support\HtmlString(
+                                '<div class="rounded-lg bg-yellow-50 dark:bg-yellow-900/20 p-3 border-l-4 border-yellow-500">' .
+                                    '<p class="text-sm text-yellow-800 dark:text-yellow-200 font-semibold">PENTING!</p>' .
+                                    '<p class="text-xs text-yellow-700 dark:text-yellow-300 mt-1">Klik tombol "Hitung Potongan & Lembur Otomatis" sebelum menyimpan data untuk mendapatkan perhitungan yang akurat!</p>' .
+                                    '</div>'
+                            ))
+                            ->visible(fn(Get $get) => empty($get('detail_potongan')))
+                            ->columnSpanFull(),
+
                         Select::make('status')
                             ->options(['draft' => 'Draft', 'paid' => 'Sudah Dibayar'])
                             ->default('draft')
@@ -131,14 +182,15 @@ class PenggajianResource extends Resource
                             ->required(),
                     ])
                     ->footerActions([
-                        Action::make('hitung_potongan')
-                            ->label('Hitung Potongan Otomatis')
+                        Action::make('hitung_otomatis')
+                            ->label('Hitung Potongan & Lembur Otomatis')
                             ->icon('heroicon-o-calculator')
-                            ->color('warning')
-                            ->visible(fn(Get $get) => $get('user_id') && $get('periode'))
+                            ->color('primary')
+                            ->visible(fn(Get $get) => $get('user_id') && $get('periode') && $get('gaji_harian'))
                             ->action(function (Set $set, Get $get) {
                                 $userId = $get('user_id');
                                 $periode = $get('periode');
+                                $gajiHarian = $get('gaji_harian');
 
                                 if (!$userId || !$periode) {
                                     Notification::make()
@@ -149,22 +201,51 @@ class PenggajianResource extends Resource
                                     return;
                                 }
 
-                                $result = Penggajian::hitungPotonganAbsensi($userId, $periode);
+                                if (!$gajiHarian || $gajiHarian <= 0) {
+                                    Notification::make()
+                                        ->title('Error')
+                                        ->body('Isi gaji harian terlebih dahulu')
+                                        ->danger()
+                                        ->send();
+                                    return;
+                                }
 
-                                $set('potongan', $result['total']);
-                                $set('detail_potongan', $result['details']);
+                                // Hitung potongan
+                                $resultPotongan = Penggajian::hitungPotonganAbsensi($userId, $periode, $gajiHarian);
+
+                                // Set gaji pokok = gaji dari kehadiran
+                                $set('gaji_pokok', $resultPotongan['gaji_dari_kehadiran']);
+                                $set('potongan', $resultPotongan['total']);
+                                $set('detail_potongan', $resultPotongan['details']);
+
+                                // Hitung lembur
+                                $resultLembur = Penggajian::hitungLembur($userId, $periode);
+                                $set('total_jam_lembur', $resultLembur['total_jam']);
+                                $set('total_lembur', $resultLembur['total_nominal']);
+
+                                // Update detail potongan dengan data lembur
+                                $details = $get('detail_potongan');
+                                $details['lembur'] = $resultLembur['details'];
+                                $set('detail_potongan', $details);
 
                                 self::calculateNetSalary($set, $get);
 
                                 Notification::make()
-                                    ->title('Potongan Berhasil Dihitung')
-                                    ->body("Total Potongan: Rp " . number_format($result['total'], 0, ',', '.'))
+                                    ->title('Perhitungan Berhasil')
+                                    ->body(sprintf(
+                                        "Hadir: %d hari | Gaji: Rp %s | Potongan Terlambat: Rp %s | Lembur: %d jam (Rp %s)",
+                                        $resultPotongan['details']['summary']['jumlah_hadir'],
+                                        number_format($resultPotongan['gaji_dari_kehadiran'], 0, ',', '.'),
+                                        number_format($resultPotongan['total'], 0, ',', '.'),
+                                        $resultLembur['total_jam'],
+                                        number_format($resultLembur['total_nominal'], 0, ',', '.')
+                                    ))
                                     ->success()
                                     ->send();
                             })
                     ]),
 
-                Forms\Components\Section::make('Detail Potongan')
+                Forms\Components\Section::make('Detail Perhitungan')
                     ->schema([
                         Placeholder::make('detail_info')
                             ->label('')
@@ -172,13 +253,18 @@ class PenggajianResource extends Resource
                                 $details = $get('detail_potongan');
 
                                 if (!$details || !is_array($details)) {
-                                    return 'Klik "Hitung Potongan Otomatis" untuk melihat detail';
+                                    return 'Klik tombol "Hitung Potongan & Lembur Otomatis" untuk melihat detail';
                                 }
 
                                 $summary = $details['summary'] ?? [];
                                 $keterlambatan = $details['keterlambatan'] ?? [];
                                 $tidakHadir = $details['tidak_hadir'] ?? [];
                                 $periodeAbsensi = $details['periode_absensi'] ?? '-';
+
+                                // Data lembur
+                                $lemburData = $details['lembur'] ?? [];
+                                $lemburSummary = $lemburData['summary'] ?? [];
+                                $dataLembur = $lemburData['data_lembur'] ?? [];
 
                                 $html = '<div class="space-y-4">';
 
@@ -192,12 +278,27 @@ class PenggajianResource extends Resource
                                 $html .= '<h4 class="font-semibold text-lg mb-2">Ringkasan Kehadiran</h4>';
                                 $html .= '<ul class="space-y-1">';
                                 $html .= '<li>Jumlah Hari Kerja: <strong>' . ($summary['jumlah_hari_kerja'] ?? 0) . ' hari</strong></li>';
-                                $html .= '<li>Jumlah Hadir: <strong>' . ($summary['jumlah_hadir'] ?? 0) . ' hari</strong></li>';
-                                $html .= '<li class="text-orange-600 dark:text-orange-400">Jumlah Keterlambatan: <strong>' . ($summary['jumlah_keterlambatan'] ?? 0) . ' kali</strong></li>';
+                                $html .= '<li class="text-green-600 dark:text-green-400">Jumlah Hadir: <strong>' . ($summary['jumlah_hadir'] ?? 0) . ' hari</strong></li>';
                                 $html .= '<li class="text-red-600 dark:text-red-400">Jumlah Tidak Hadir: <strong>' . ($summary['jumlah_tidak_hadir'] ?? 0) . ' hari</strong></li>';
-                                $html .= '<li class="text-red-600 dark:text-red-400 mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">Total Potongan: <strong>Rp ' . number_format($summary['total_potongan'] ?? 0, 0, ',', '.') . '</strong></li>';
+                                $html .= '<li class="text-orange-600 dark:text-orange-400">Jumlah Keterlambatan: <strong>' . ($summary['jumlah_keterlambatan'] ?? 0) . ' kali</strong></li>';
+                                $html .= '<li class="mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">Gaji Harian: <strong>Rp ' . number_format($summary['gaji_harian'] ?? 0, 0, ',', '.') . '</strong></li>';
+                                $html .= '<li class="text-green-600 dark:text-green-400 font-semibold">Gaji dari Kehadiran: <strong>Rp ' . number_format($summary['gaji_dari_kehadiran'] ?? 0, 0, ',', '.') . '</strong></li>';
+                                $html .= '<li class="text-orange-600 dark:text-orange-400">Potongan Keterlambatan: <strong>Rp ' . number_format($summary['potongan_keterlambatan'] ?? 0, 0, ',', '.') . '</strong></li>';
                                 $html .= '</ul>';
                                 $html .= '</div>';
+
+                                // Detail Lembur
+                                if (count($dataLembur) > 0) {
+                                    $html .= '<div class="rounded-lg bg-green-50 dark:bg-green-900/20 p-4">';
+                                    $html .= '<h4 class="font-semibold mb-2 text-green-800 dark:text-green-200">Detail Lembur</h4>';
+                                    $html .= '<p class="text-sm mb-2">Total: <strong>' . ($lemburSummary['total_jam_lembur'] ?? 0) . ' jam</strong> × Rp 15.000 = <strong>Rp ' . number_format($lemburSummary['total_nominal'] ?? 0, 0, ',', '.') . '</strong></p>';
+                                    $html .= '<ul class="space-y-1 text-sm">';
+                                    foreach ($dataLembur as $item) {
+                                        $html .= '<li><strong>' . $item['tanggal'] . '</strong>: ' . $item['jam_lembur'] . ' jam (Rp ' . number_format($item['nominal'], 0, ',', '.') . ')</li>';
+                                    }
+                                    $html .= '</ul>';
+                                    $html .= '</div>';
+                                }
 
                                 // Keterlambatan
                                 if (count($keterlambatan) > 0) {
@@ -237,15 +338,17 @@ class PenggajianResource extends Resource
                     ->sortable(),
 
                 TextColumn::make('gaji_pokok')
-                    ->label('Gaji Pokok')
-                    ->money('IDR')
-                    ->sortable(),
-
-                TextColumn::make('tunjangan')
-                    ->label('Tunjangan')
+                    ->label('Gaji Kehadiran')
                     ->money('IDR')
                     ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->description(fn($record) => 'Hadir: ' . ($record->detail_potongan['summary']['jumlah_hadir'] ?? '-') . ' hari'),
+
+                TextColumn::make('total_lembur')
+                    ->label('Lembur')
+                    ->money('IDR')
+                    ->sortable()
+                    ->color('success')
+                    ->toggleable(),
 
                 TextColumn::make('potongan')
                     ->label('Potongan')
@@ -300,7 +403,6 @@ class PenggajianResource extends Resource
                             ->searchable(),
                     ])
                     ->action(function (array $data) {
-
                         $bulan = $data['bulan'];
 
                         $penggajians = \App\Models\Penggajian::with('user')
@@ -318,7 +420,6 @@ class PenggajianResource extends Resource
                         }
 
                         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.slip-gaji-bulk', compact('penggajians', 'bulan'));
-
                         $filename = 'Slip_Gaji_Periode_' . $bulan . '.pdf';
 
                         return response()->streamDownload(function () use ($pdf) {
@@ -370,12 +471,22 @@ class PenggajianResource extends Resource
                             ->label('Periode Absensi'),
 
                         TextEntry::make('gaji_pokok')
-                            ->label('Gaji Pokok')
+                            ->label('Gaji dari Kehadiran (' . ($infolist->getRecord()->detail_potongan['summary']['jumlah_hadir'] ?? 0) . ' hari)')
+                            ->money('IDR')
+                            ->color('success'),
+
+                        TextEntry::make('gaji_harian')
+                            ->label('Gaji Harian')
                             ->money('IDR'),
 
                         TextEntry::make('tunjangan')
                             ->label('Tunjangan')
                             ->money('IDR'),
+
+                        TextEntry::make('total_lembur')
+                            ->label('Lembur (' . ($infolist->getRecord()->total_jam_lembur ?? 0) . ' jam)')
+                            ->money('IDR')
+                            ->color('success'),
 
                         TextEntry::make('potongan')
                             ->label('Potongan')
@@ -387,7 +498,7 @@ class PenggajianResource extends Resource
                             ->badge(),
                     ]),
 
-                Section::make('Detail Potongan')
+                Section::make('Ringkasan Kehadiran')
                     ->schema([
                         TextEntry::make('detail_potongan.summary.jumlah_hari_kerja')
                             ->label('Jumlah Hari Kerja')

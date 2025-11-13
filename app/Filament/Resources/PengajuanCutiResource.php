@@ -92,7 +92,6 @@ class PengajuanCutiResource extends Resource
                     ->disabled(fn(string $operation): bool => $operation !== 'create'),
 
                 Forms\Components\Section::make('Persetujuan (HRD/Admin)')
-                    ->hidden(fn() => !auth()->user()->hasRole(['super_admin', 'HRD']))
                     ->columns(2)
                     ->schema([
                         Select::make('disetujui_oleh_id')
@@ -105,7 +104,8 @@ class PengajuanCutiResource extends Resource
                             )
                             ->searchable()
                             ->preload()
-                            ->nullable(),
+                            ->nullable()
+                            ->disabled(fn() => !auth()->user()->hasRole(['super_admin', 'HRD'])),
 
                         Select::make('status')
                             ->label('Status Persetujuan')
@@ -114,13 +114,16 @@ class PengajuanCutiResource extends Resource
                                 'approved' => 'Disetujui',
                                 'rejected' => 'Ditolak',
                             ])
-                            ->required(),
+                            ->required()
+                            ->disabled(fn() => !auth()->user()->hasRole(['super_admin', 'HRD'])),
 
                         Textarea::make('catatan_hrd')
                             ->label('Catatan HRD/Admin')
                             ->columnSpan('full')
-                            ->nullable(),
+                            ->nullable()
+                            ->disabled(fn() => !auth()->user()->hasRole(['super_admin', 'HRD'])),
                     ]),
+
             ])->columns(1);
     }
 
