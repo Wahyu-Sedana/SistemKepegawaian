@@ -46,7 +46,6 @@ class Penggajian extends Model
 
         $jamMasukNormal = config('payroll.jam_masuk_normal', '08:00:00');
         $toleransi = config('payroll.toleransi_keterlambatan', 15);
-        // $potonganTerlambat = config('payroll.potongan_per_keterlambatan', 50000);
         $potonganTerlambat = $gajiHarian / 2;
 
         $totalPotonganKeterlambatan = 0;
@@ -63,7 +62,7 @@ class Penggajian extends Model
         $jumlahHadir = 0;
 
         while ($currentDate <= $endDate) {
-            if ($currentDate->isWeekend()) {
+            if ($currentDate->isSunday()) {
                 $currentDate->addDay();
                 continue;
             }
@@ -112,8 +111,6 @@ class Penggajian extends Model
         }
 
         $gajiDapatDariKehadiran = $gajiHarian * $jumlahHadir;
-
-
         $totalPotongan = $totalPotonganKeterlambatan;
 
         $details['summary'] = [
@@ -151,7 +148,7 @@ class Penggajian extends Model
         $currentDate = $startDate->copy();
 
         while ($currentDate <= $endDate) {
-            if ($currentDate->isWeekend()) {
+            if ($currentDate->isSunday()) {
                 $currentDate->addDay();
                 continue;
             }

@@ -340,8 +340,7 @@ class PenggajianResource extends Resource
                 TextColumn::make('gaji_pokok')
                     ->label('Gaji Kehadiran')
                     ->money('IDR')
-                    ->sortable()
-                    ->description(fn($record) => 'Hadir: ' . ($record->detail_potongan['summary']['jumlah_hadir'] ?? '-') . ' hari'),
+                    ->sortable(),
 
                 TextColumn::make('total_lembur')
                     ->label('Lembur')
