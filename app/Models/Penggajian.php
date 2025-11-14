@@ -46,7 +46,8 @@ class Penggajian extends Model
 
         $jamMasukNormal = config('payroll.jam_masuk_normal', '08:00:00');
         $toleransi = config('payroll.toleransi_keterlambatan', 15);
-        $potonganTerlambat = config('payroll.potongan_per_keterlambatan', 50000);
+        // $potonganTerlambat = config('payroll.potongan_per_keterlambatan', 50000);
+        $potonganTerlambat = $gajiHarian / 2;
 
         $totalPotonganKeterlambatan = 0;
         $details = [

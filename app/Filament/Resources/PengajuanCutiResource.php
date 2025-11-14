@@ -105,6 +105,7 @@ class PengajuanCutiResource extends Resource
                             ->searchable()
                             ->preload()
                             ->nullable()
+                            ->required(fn() => auth()->user()->hasRole(['super_admin', 'HRD']))
                             ->disabled(fn() => !auth()->user()->hasRole(['super_admin', 'HRD'])),
 
                         Select::make('status')
@@ -114,7 +115,8 @@ class PengajuanCutiResource extends Resource
                                 'approved' => 'Disetujui',
                                 'rejected' => 'Ditolak',
                             ])
-                            ->required()
+                            ->required(fn() => auth()->user()->hasRole(['super_admin', 'HRD']))
+                            ->default('pending')
                             ->disabled(fn() => !auth()->user()->hasRole(['super_admin', 'HRD'])),
 
                         Textarea::make('catatan_hrd')
@@ -123,6 +125,7 @@ class PengajuanCutiResource extends Resource
                             ->nullable()
                             ->disabled(fn() => !auth()->user()->hasRole(['super_admin', 'HRD'])),
                     ]),
+
 
             ])->columns(1);
     }
