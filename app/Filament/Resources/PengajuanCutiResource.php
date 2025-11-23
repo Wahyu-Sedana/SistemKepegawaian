@@ -58,12 +58,34 @@ class PengajuanCutiResource extends Resource
                         DatePicker::make('tanggal_mulai')
                             ->label('Tanggal Mulai')
                             ->required()
+                            ->reactive()
+                            ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                                $mulai = $state;
+                                $selesai = $get('tanggal_selesai');
+
+                                if ($mulai && $selesai) {
+                                    $jumlah = \Carbon\Carbon::parse($mulai)->diffInDays(\Carbon\Carbon::parse($selesai)) + 1;
+                                    $set('jumlah_hari', $jumlah);
+                                }
+                            })
                             ->disabled(fn(string $operation): bool => $operation !== 'create'),
+
 
                         DatePicker::make('tanggal_selesai')
                             ->label('Tanggal Selesai')
                             ->required()
+                            ->reactive()
+                            ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                                $mulai = $get('tanggal_mulai');
+                                $selesai = $state;
+
+                                if ($mulai && $selesai) {
+                                    $jumlah = \Carbon\Carbon::parse($mulai)->diffInDays(\Carbon\Carbon::parse($selesai)) + 1;
+                                    $set('jumlah_hari', $jumlah);
+                                }
+                            })
                             ->disabled(fn(string $operation): bool => $operation !== 'create'),
+
 
                         FileUpload::make('bukti_surat')
                             ->label('Upload Bukti Sakit')
@@ -81,6 +103,7 @@ class PengajuanCutiResource extends Resource
                             ->label('Jumlah Hari')
                             ->required()
                             ->numeric()
+                            ->disabled()
                             ->disabled(fn(string $operation): bool => $operation !== 'create'),
                     ]),
 
