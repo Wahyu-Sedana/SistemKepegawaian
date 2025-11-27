@@ -24,9 +24,7 @@ class UserHistoryResource extends Resource
     public static function form(Form $form): Form
     {
         return $form
-            ->schema([
-                // Read only - tidak ada form
-            ]);
+            ->schema([]);
     }
 
     public static function table(Table $table): Table
