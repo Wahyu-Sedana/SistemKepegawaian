@@ -17,6 +17,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Carbon\Carbon;
+use Filament\Notifications\Notification;
 
 class PengajuanCutiResource extends Resource
 {
@@ -92,6 +93,7 @@ class PengajuanCutiResource extends Resource
                         DatePicker::make('tanggal_mulai')
                             ->label('Tanggal Mulai')
                             ->required()
+                            ->minDate(now())
                             ->reactive()
                             ->afterStateUpdated(function ($state, callable $set, callable $get) {
                                 $mulai = $state;
@@ -102,7 +104,6 @@ class PengajuanCutiResource extends Resource
                                     $tanggalSelesai = Carbon::parse($selesai);
                                     $jumlah = 0;
 
-                                    // Hitung hari kerja (exclude Minggu)
                                     for ($tanggal = $tanggalMulai->copy(); $tanggal->lte($tanggalSelesai); $tanggal->addDay()) {
                                         if (!$tanggal->isSunday()) {
                                             $jumlah++;
@@ -117,6 +118,7 @@ class PengajuanCutiResource extends Resource
                         DatePicker::make('tanggal_selesai')
                             ->label('Tanggal Selesai')
                             ->required()
+                            ->minDate(fn(callable $get) => $get('tanggal_mulai') ?: now())
                             ->reactive()
                             ->afterStateUpdated(function ($state, callable $set, callable $get) {
                                 $mulai = $get('tanggal_mulai');
@@ -127,7 +129,6 @@ class PengajuanCutiResource extends Resource
                                     $tanggalSelesai = Carbon::parse($selesai);
                                     $jumlah = 0;
 
-                                    // Hitung hari kerja (exclude Minggu)
                                     for ($tanggal = $tanggalMulai->copy(); $tanggal->lte($tanggalSelesai); $tanggal->addDay()) {
                                         if (!$tanggal->isSunday()) {
                                             $jumlah++;
@@ -145,7 +146,22 @@ class PengajuanCutiResource extends Resource
                             ->numeric()
                             ->disabled()
                             ->helperText('Hari Minggu tidak dihitung')
-                            ->disabled(fn(string $operation): bool => $operation !== 'create'),
+                            ->disabled(fn(string $operation): bool => $operation !== 'create')
+                            ->afterStateUpdated(function ($state, callable $get) {
+                                $userId = auth()->id();
+                                $tahun = Carbon::now()->year;
+                                $sisaKuota = PengajuanCuti::getSisaKuotaCuti($userId, $tahun);
+
+                                if ($state > $sisaKuota) {
+                                    Notification::make()
+                                        ->danger()
+                                        ->title('Kuota Cuti Tidak Mencukupi!')
+                                        ->body("Anda mengajukan {$state} hari, tetapi sisa kuota cuti Anda hanya {$sisaKuota} hari.")
+                                        ->persistent()
+                                        ->send();
+                                }
+                            })
+                            ->live(),
 
                         FileUpload::make('bukti_surat')
                             ->label('Upload Bukti Sakit')
